@@ -1,0 +1,353 @@
+diff --git a/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h b/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h
+index 82fc317..ad253fc 100644
+--- a/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h
++++ b/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h
+@@ -15,6 +15,7 @@
+ #include "../MultitaskSupport/LCStatusBarManager.h"
+ #include "../MultitaskSupport/PiPManager.h"
+ #include "../MultitaskSupport/VirtualWindowsHostView.h"
++#include "../MultitaskSupport/LCSideStoreTabHost.h"
+ #include "../LiveContainer/FoundationPrivate.h"
+ 
+ #endif /* LiveContainerSwiftUI_Bridging_Header_h_h */
+diff --git a/LiveContainerSwiftUI/Views/LCSideStoreTab.swift b/LiveContainerSwiftUI/Views/LCSideStoreTab.swift
+new file mode 100644
+index 0000000..e096f1d
+--- /dev/null
++++ b/LiveContainerSwiftUI/Views/LCSideStoreTab.swift
+@@ -0,0 +1,29 @@
++//
++//  LCSideStoreTab.swift
++//  LiveContainerSwiftUI
++//
++//  SwiftUI wrapper around the embedded built-in SideStore scene.
++//
++
++import SwiftUI
++
++struct LCSideStoreTabView: UIViewControllerRepresentable {
++    var isActive: Bool
++    var onReady: () -> Void
++    var onExit: () -> Void
++    var onError: (String) -> Void
++
++    func makeUIViewController(context: Context) -> LCSideStoreTabHostViewController {
++        let vc = LCSideStoreTabHostViewController()
++        vc.onReady = { onReady() }
++        vc.onExit = { onExit() }
++        vc.onError = { message in onError(message) }
++        return vc
++    }
++
++    func updateUIViewController(_ uiViewController: LCSideStoreTabHostViewController, context: Context) {
++        if isActive {
++            uiViewController.startIfNeeded()
++        }
++    }
++}
+diff --git a/LiveContainerSwiftUI/Views/LCTabView.swift b/LiveContainerSwiftUI/Views/LCTabView.swift
+index af4c70e..8696652 100644
+--- a/LiveContainerSwiftUI/Views/LCTabView.swift
++++ b/LiveContainerSwiftUI/Views/LCTabView.swift
+@@ -19,37 +19,45 @@ struct LCTabView: View {
+     @Environment(\.scenePhase) var scenePhase
+     @StateObject var downloadHelper = DownloadHelper()
+ 
++    @AppStorage("LCTopTab") var topTab: String = "lc"
++    @State var sideStoreReady = false
++    @State var sideStoreExited = false
++    @State var sideStoreError: String? = nil
++    @State var sideStoreSessionID = UUID()
++
+     let pub = NotificationCenter.default.publisher(for: UIScene.didDisconnectNotification)
+     
++    private var sideStoreAvailable: Bool {
++        FileManager.default.fileExists(atPath: Bundle.main.bundlePath + "/Frameworks/SideStoreApp.framework")
++    }
++
+     var body: some View {
+-        TabView(selection: $sharedModel.selectedTab) {
+-            if DataManager.shared.model.multiLCStatus != 2 {
+-                LCSourcesView()
+-                    .tabItem {
+-                        Label("lc.tabView.sources".loc, systemImage: "books.vertical")
+-                    }
+-                    .tag(LCTabIdentifier.sources)
+-            }
+-            LCAppListView()
+-                .tabItem {
+-                    Label("lc.tabView.apps".loc, systemImage: "square.stack.3d.up.fill")
++        VStack(spacing: 0) {
++            if sideStoreAvailable {
++                Picker("", selection: $topTab) {
++                    Text("LiveContainer").tag("lc")
++                    Text("SideStore").tag("ss")
+                 }
+-                .tag(LCTabIdentifier.apps)
+-            if DataManager.shared.model.multiLCStatus != 2 {
+-                LCTweaksView()
+-                    .tabItem{
+-                        Label("lc.tabView.tweaks".loc, systemImage: "wrench.and.screwdriver")
+-                    }
+-                    .tag(LCTabIdentifier.tweaks)
++                .pickerStyle(.segmented)
++                .padding(.horizontal, 12)
++                .padding(.top, 4)
++                .padding(.bottom, 6)
+             }
+-            
+-            LCSettingsView()
+-                .tabItem {
+-                    Label("lc.tabView.settings".loc, systemImage: "gearshape.fill")
++
++            ZStack {
++                lcContent
++                    .opacity(topTab == "lc" || !sideStoreAvailable ? 1 : 0)
++                    .allowsHitTesting(topTab == "lc" || !sideStoreAvailable)
++                    .accessibilityHidden(topTab != "lc" && sideStoreAvailable)
++
++                if sideStoreAvailable {
++                    sideStoreContent
++                        .opacity(topTab == "ss" ? 1 : 0)
++                        .allowsHitTesting(topTab == "ss")
++                        .accessibilityHidden(topTab != "ss")
+                 }
+-                .tag(LCTabIdentifier.settings)
++            }
+         }
+-        .downloadAlert(helper: downloadHelper)
+         .environmentObject(downloadHelper)
+         .alert("lc.common.error".loc, isPresented: $errorShow){
+             Button("lc.common.ok".loc, action: {
+@@ -95,6 +103,9 @@ struct LCTabView: View {
+             }
+         }
+         .task {
++            if !sideStoreAvailable {
++                topTab = "lc"
++            }
+             closeDuplicatedWindow()
+             checkLastLaunchError()
+             checkTeamId()
+@@ -113,6 +124,87 @@ struct LCTabView: View {
+             dispatchURL(url: url)
+         }
+     }
++
++    private var lcContent: some View {
++        TabView(selection: $sharedModel.selectedTab) {
++            if DataManager.shared.model.multiLCStatus != 2 {
++                LCSourcesView()
++                    .tabItem {
++                        Label("lc.tabView.sources".loc, systemImage: "books.vertical")
++                    }
++                    .tag(LCTabIdentifier.sources)
++            }
++            LCAppListView()
++                .tabItem {
++                    Label("lc.tabView.apps".loc, systemImage: "square.stack.3d.up.fill")
++                }
++                .tag(LCTabIdentifier.apps)
++            if DataManager.shared.model.multiLCStatus != 2 {
++                LCTweaksView()
++                    .tabItem{
++                        Label("lc.tabView.tweaks".loc, systemImage: "wrench.and.screwdriver")
++                    }
++                    .tag(LCTabIdentifier.tweaks)
++            }
++
++            LCSettingsView()
++                .tabItem {
++                    Label("lc.tabView.settings".loc, systemImage: "gearshape.fill")
++                }
++                .tag(LCTabIdentifier.settings)
++        }
++        .downloadAlert(helper: downloadHelper)
++    }
++
++    private var sideStoreContent: some View {
++        ZStack {
++            LCSideStoreTabView(
++                isActive: topTab == "ss",
++                onReady: {
++                    sideStoreReady = true
++                },
++                onExit: {
++                    sideStoreReady = false
++                    sideStoreExited = true
++                },
++                onError: { message in
++                    sideStoreReady = false
++                    sideStoreError = message
++                }
++            )
++            .id(sideStoreSessionID)
++
++            if let sideStoreError {
++                sideStoreMessage(title: "SideStore failed to start", message: sideStoreError)
++            } else if sideStoreExited {
++                sideStoreMessage(title: "SideStore exited", message: "The built-in SideStore process stopped.")
++            } else if !sideStoreReady {
++                ProgressView("Starting SideStore...")
++                    .padding(24)
++                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
++            }
++        }
++    }
++
++    private func sideStoreMessage(title: String, message: String) -> some View {
++        VStack(spacing: 12) {
++            Text(title)
++                .font(.headline)
++            Text(message)
++                .font(.footnote)
++                .multilineTextAlignment(.center)
++            Button("Relaunch SideStore") {
++                sideStoreError = nil
++                sideStoreExited = false
++                sideStoreReady = false
++                sideStoreSessionID = UUID()
++            }
++            .buttonStyle(.borderedProminent)
++        }
++        .padding(24)
++        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
++        .padding()
++    }
+     
+     func dispatchURL(url: URL) {
+         repeat {
+diff --git a/MultitaskSupport/LCSideStoreTabHost.h b/MultitaskSupport/LCSideStoreTabHost.h
+new file mode 100644
+index 0000000..bfd66b9
+--- /dev/null
++++ b/MultitaskSupport/LCSideStoreTabHost.h
+@@ -0,0 +1,21 @@
++//
++//  LCSideStoreTabHost.h
++//  LiveContainer
++//
++//  Hosts the built-in SideStore (running inside LiveProcess) as an
++//  embedded view so it can be shown inside a tab next to LiveContainer's UI.
++//
++
++#import <UIKit/UIKit.h>
++
++API_AVAILABLE(ios(16.0))
++@interface LCSideStoreTabHostViewController : UIViewController
++
++@property(nonatomic, copy) void (^onReady)(void);
++@property(nonatomic, copy) void (^onExit)(void);
++@property(nonatomic, copy) void (^onError)(NSString *message);
++
++- (void)startIfNeeded;
++- (void)restart;
++
++@end
+diff --git a/MultitaskSupport/LCSideStoreTabHost.m b/MultitaskSupport/LCSideStoreTabHost.m
+new file mode 100644
+index 0000000..c93fb00
+--- /dev/null
++++ b/MultitaskSupport/LCSideStoreTabHost.m
+@@ -0,0 +1,101 @@
++//
++//  LCSideStoreTabHost.m
++//  LiveContainer
++//
++
++#import "LCSideStoreTabHost.h"
++#import "AppSceneViewController.h"
++
++@class LCSideStoreTabHostViewController;
++
++@interface LCSideStoreSceneDelegateProxy : NSObject <AppSceneViewControllerDelegate>
++@property(nonatomic, weak) LCSideStoreTabHostViewController *host;
++@end
++
++@interface LCSideStoreTabHostViewController () <AppSceneViewControllerDelegate>
++@end
++
++@implementation LCSideStoreSceneDelegateProxy
++
++- (void)appSceneVCAppDidExit:(AppSceneViewController *)vc {
++    LCSideStoreTabHostViewController *host = self.host;
++    dispatch_async(dispatch_get_main_queue(), ^{
++        if (host.onExit) host.onExit();
++    });
++}
++
++- (void)appSceneVC:(AppSceneViewController *)vc didInitializeWithError:(NSError *)error {
++    LCSideStoreTabHostViewController *host = self.host;
++    dispatch_async(dispatch_get_main_queue(), ^{
++        if (error) {
++            if (host.onError) host.onError(error.localizedDescription);
++        } else if (host.onReady) {
++            host.onReady();
++        }
++    });
++}
++
++- (void)appSceneVCWillActivateScene:(AppSceneViewController *)vc {
++    vc.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
++}
++
++@end
++
++@implementation LCSideStoreTabHostViewController {
++    AppSceneViewController *_sceneVC;
++    LCSideStoreSceneDelegateProxy *_delegateProxy;
++    BOOL _started;
++}
++
++- (void)viewDidLoad {
++    [super viewDidLoad];
++    self.view.backgroundColor = UIColor.systemBackgroundColor;
++}
++
++- (void)startIfNeeded {
++    if (_started) {
++        return;
++    }
++    _started = YES;
++
++    NSString *bundlePath = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Frameworks/SideStoreApp.framework"];
++    NSDictionary *appInfo = [NSDictionary dictionaryWithContentsOfFile:[bundlePath stringByAppendingPathComponent:@"LCAppInfo.plist"]];
++    NSString *dataUUID = appInfo[@"LCDataUUID"] ?: @"builtinSideStore";
++
++    _delegateProxy = [LCSideStoreSceneDelegateProxy new];
++    _delegateProxy.host = self;
++    _sceneVC = [[AppSceneViewController alloc] initWithBundleId:@"builtinSideStore" dataUUID:dataUUID delegate:_delegateProxy];
++    if (!_sceneVC) {
++        _started = NO;
++        if (self.onError) {
++            self.onError(@"Unable to create the SideStore scene.");
++        }
++        return;
++    }
++
++    [self addChildViewController:_sceneVC];
++    _sceneVC.view.frame = self.view.bounds;
++    _sceneVC.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
++    [self.view addSubview:_sceneVC.view];
++    [_sceneVC didMoveToParentViewController:self];
++}
++
++- (void)viewDidLayoutSubviews {
++    [super viewDidLayoutSubviews];
++    _sceneVC.view.frame = self.view.bounds;
++}
++
++- (void)restart {
++    _started = NO;
++    _delegateProxy.host = nil;
++    if (_sceneVC) {
++        [_sceneVC terminate];
++        [_sceneVC.view removeFromSuperview];
++        [_sceneVC removeFromParentViewController];
++        _sceneVC = nil;
++    }
++    _delegateProxy = nil;
++    [self startIfNeeded];
++}
++
++@end

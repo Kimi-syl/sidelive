@@ -1,0 +1,38 @@
+diff --git a/LiveProcess/main.m b/LiveProcess/main.m
+index c376fcd..4c3ed64 100644
+--- a/LiveProcess/main.m
++++ b/LiveProcess/main.m
+@@ -82,17 +82,22 @@ int LiveProcessMain(int argc, char *argv[]) {
+         }
+         NSXPCListenerEndpoint* endpoint = appInfo[@"endpoint"];
+ 
+-        NSXPCConnection* connection = [[NSXPCConnection alloc] initWithListenerEndpoint:endpoint];
+-        connection.remoteObjectInterface = [NSXPCInterface interfaceWithProtocol:@protocol(RefreshServer)];
+-        connection.interruptionHandler = ^{
+-            NSLog(@"interrupted!!!");
+-        };
+-        
+-        [connection activate];
+-        
+-        NSObject<RefreshServer>* proxy = [connection remoteObjectProxy];
+-        LiveProcessSideStoreHandler.shared.server = proxy;
+-        LiveProcessSideStoreHandler.shared.connection = connection;
++        // The endpoint is only supplied when SideStore is started to service an
++        // app intent. When it is started as an embedded UI (the SideStore tab),
++        // there is nobody listening, so skip the XPC setup instead of crashing.
++        if (endpoint) {
++            NSXPCConnection* connection = [[NSXPCConnection alloc] initWithListenerEndpoint:endpoint];
++            connection.remoteObjectInterface = [NSXPCInterface interfaceWithProtocol:@protocol(RefreshServer)];
++            connection.interruptionHandler = ^{
++                NSLog(@"interrupted!!!");
++            };
++
++            [connection activate];
++
++            NSObject<RefreshServer>* proxy = [connection remoteObjectProxy];
++            LiveProcessSideStoreHandler.shared.server = proxy;
++            LiveProcessSideStoreHandler.shared.connection = connection;
++        }
+         
+     }
+ 

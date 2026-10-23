@@ -1,0 +1,22 @@
+diff --git a/MultitaskSupport/AppSceneViewController.m b/MultitaskSupport/AppSceneViewController.m
+index 37a6137..8782f39 100644
+--- a/MultitaskSupport/AppSceneViewController.m
++++ b/MultitaskSupport/AppSceneViewController.m
+@@ -72,7 +72,16 @@
+     }
+     
+     NSURL *docURL = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].lastObject;
+-    if ([NSUserDefaults.standardUserDefaults boolForKey:@"LCSharePrivateDataWithLiveProcess"]) {
++    if ([bundleId isEqualToString:@"builtinSideStore"]) {
++        // Built-in SideStore keeps its data in <Documents>/SideStore. LiveProcess converts
++        // this bookmark into specifiedSideStoreContainerPath.
++        NSURL *sideStoreHome = [docURL URLByAppendingPathComponent:@"SideStore" isDirectory:YES];
++        [[NSFileManager defaultManager] createDirectoryAtURL:sideStoreHome withIntermediateDirectories:YES attributes:nil error:nil];
++        NSData *homeBookmark = [sideStoreHome bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
++        if (homeBookmark) {
++            [bookmarks addObject:homeBookmark];
++        }
++    } else if ([NSUserDefaults.standardUserDefaults boolForKey:@"LCSharePrivateDataWithLiveProcess"]) {
+         NSData* bookmarkData = [docURL bookmarkDataWithOptions:(1<<11) includingResourceValuesForKeys:0 relativeToURL:0 error:0];
+         [bookmarks addObject:bookmarkData];
+     } else {

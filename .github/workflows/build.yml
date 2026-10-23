@@ -1,0 +1,52 @@
+name: Build SideLive IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build merged IPA
+    runs-on: macos-26
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          sw_vers
+
+      - name: Fetch pinned upstreams
+        run: ./scripts/fetch.sh
+
+      - name: Build SideStore (unsigned)
+        run: ./scripts/build-sidestore.sh
+
+      - name: Build LiveContainer (unsigned)
+        run: ./scripts/build-livecontainer.sh
+
+      - name: Package SideLive.ipa
+        run: ./scripts/package.sh
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SideLive.ipa
+          path: artifacts/SideLive.ipa
+          if-no-files-found: error
+          retention-days: 14

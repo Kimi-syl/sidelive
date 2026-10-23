@@ -262,10 +262,10 @@ index 0000000..bfd66b9
 +@end
 diff --git a/MultitaskSupport/LCSideStoreTabHost.m b/MultitaskSupport/LCSideStoreTabHost.m
 new file mode 100644
-index 0000000..c93fb00
+index 0000000..af79f8f
 --- /dev/null
 +++ b/MultitaskSupport/LCSideStoreTabHost.m
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,123 @@
 +//
 +//  LCSideStoreTabHost.m
 +//  LiveContainer
@@ -305,6 +305,28 @@ index 0000000..c93fb00
 +
 +- (void)appSceneVCWillActivateScene:(AppSceneViewController *)vc {
 +    vc.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
++}
++
++- (void)appSceneVC:(AppSceneViewController *)vc
++ didUpdateFromSettings:(UIMutableApplicationSceneSettings *)baseSettings
++ transitionContext:(id)newContext
++ lifecycleActionType:(uint32_t)actionType {
++    UIView *hostView = self.host.view;
++    if (!hostView) {
++        return;
++    }
++    [vc updateSettingsWithBlock:^(UIMutableApplicationSceneSettings *settings) {
++        settings.userInterfaceStyle = baseSettings.userInterfaceStyle;
++        settings.interfaceOrientation = baseSettings.interfaceOrientation;
++        settings.deviceOrientation = baseSettings.deviceOrientation;
++        settings.foreground = YES;
++        CGSize size = hostView.bounds.size;
++        if (UIInterfaceOrientationIsLandscape(baseSettings.interfaceOrientation)) {
++            settings.frame = CGRectMake(0, 0, size.height, size.width);
++        } else {
++            settings.frame = CGRectMake(0, 0, size.width, size.height);
++        }
++    }];
 +}
 +
 +@end

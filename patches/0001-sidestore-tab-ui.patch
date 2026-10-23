@@ -25,10 +25,10 @@ index 82fc317..ad253fc 100644
  #endif /* LiveContainerSwiftUI_Bridging_Header_h_h */
 diff --git a/LiveContainerSwiftUI/Views/LCSideStoreTab.swift b/LiveContainerSwiftUI/Views/LCSideStoreTab.swift
 new file mode 100644
-index 0000000..e096f1d
+index 0000000..80aa1cd
 --- /dev/null
 +++ b/LiveContainerSwiftUI/Views/LCSideStoreTab.swift
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,30 @@
 +//
 +//  LCSideStoreTab.swift
 +//  LiveContainerSwiftUI
@@ -38,6 +38,7 @@ index 0000000..e096f1d
 +
 +import SwiftUI
 +
++@available(iOS 16.0, *)
 +struct LCSideStoreTabView: UIViewControllerRepresentable {
 +    var isActive: Bool
 +    var onReady: () -> Void
@@ -59,7 +60,7 @@ index 0000000..e096f1d
 +    }
 +}
 diff --git a/LiveContainerSwiftUI/Views/LCTabView.swift b/LiveContainerSwiftUI/Views/LCTabView.swift
-index af4c70e..8696652 100644
+index af4c70e..fd0f004 100644
 --- a/LiveContainerSwiftUI/Views/LCTabView.swift
 +++ b/LiveContainerSwiftUI/Views/LCTabView.swift
 @@ -19,37 +19,45 @@ struct LCTabView: View {
@@ -91,7 +92,7 @@ index af4c70e..8696652 100644
 -                .tabItem {
 -                    Label("lc.tabView.apps".loc, systemImage: "square.stack.3d.up.fill")
 +        VStack(spacing: 0) {
-+            if sideStoreAvailable {
++            if #available(iOS 16.0, *), sideStoreAvailable {
 +                Picker("", selection: $topTab) {
 +                    Text("LiveContainer").tag("lc")
 +                    Text("SideStore").tag("ss")
@@ -119,7 +120,7 @@ index af4c70e..8696652 100644
 +                    .allowsHitTesting(topTab == "lc" || !sideStoreAvailable)
 +                    .accessibilityHidden(topTab != "lc" && sideStoreAvailable)
 +
-+                if sideStoreAvailable {
++                if #available(iOS 16.0, *), sideStoreAvailable {
 +                    sideStoreContent
 +                        .opacity(topTab == "ss" ? 1 : 0)
 +                        .allowsHitTesting(topTab == "ss")
@@ -136,13 +137,13 @@ index af4c70e..8696652 100644
              }
          }
          .task {
-+            if !sideStoreAvailable {
++            if #unavailable(iOS 16.0) {
 +                topTab = "lc"
 +            }
              closeDuplicatedWindow()
              checkLastLaunchError()
              checkTeamId()
-@@ -113,6 +124,87 @@ struct LCTabView: View {
+@@ -113,6 +124,89 @@ struct LCTabView: View {
              dispatchURL(url: url)
          }
      }
@@ -178,6 +179,7 @@ index af4c70e..8696652 100644
 +        .downloadAlert(helper: downloadHelper)
 +    }
 +
++    @available(iOS 16.0, *)
 +    private var sideStoreContent: some View {
 +        ZStack {
 +            LCSideStoreTabView(
@@ -208,6 +210,7 @@ index af4c70e..8696652 100644
 +        }
 +    }
 +
++    @available(iOS 16.0, *)
 +    private func sideStoreMessage(title: String, message: String) -> some View {
 +        VStack(spacing: 12) {
 +            Text(title)

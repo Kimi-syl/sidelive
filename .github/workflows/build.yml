@@ -34,8 +34,23 @@ jobs:
       - name: Fetch pinned upstreams
         run: ./scripts/fetch.sh
 
+      - name: Restore cached SideStore IPA
+        id: sidestore-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: artifacts/SideStore.ipa
+          key: sidestore-ipa-${{ hashFiles('pins.env') }}-${{ hashFiles('scripts/build-sidestore.sh') }}
+
       - name: Build SideStore (unsigned)
+        if: steps.sidestore-cache.outputs.cache-hit != 'true'
         run: ./scripts/build-sidestore.sh
+
+      - name: Save cached SideStore IPA
+        if: steps.sidestore-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: artifacts/SideStore.ipa
+          key: sidestore-ipa-${{ hashFiles('pins.env') }}-${{ hashFiles('scripts/build-sidestore.sh') }}
 
       - name: Build LiveContainer (unsigned)
         run: ./scripts/build-livecontainer.sh

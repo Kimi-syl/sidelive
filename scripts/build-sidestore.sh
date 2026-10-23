@@ -15,4 +15,6 @@ echo "==> building SideStore (unsigned)"
 python3 scripts/ci/workflow.py build
 
 test -f SideStore.ipa
-echo "==> built $ROOT/work/sidestore/SideStore.ipa"
+mkdir -p "$ROOT/artifacts"
+cp SideStore.ipa "$ROOT/artifacts/SideStore.ipa"
+echo "==> built $ROOT/artifacts/SideStore.ipa"

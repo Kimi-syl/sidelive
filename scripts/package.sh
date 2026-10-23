@@ -58,7 +58,12 @@ fi
 
 mkdir -p "$OUT/tmp"
 echo "==> unpacking built SideStore"
-unzip -q "$SS/SideStore.ipa" -d "$OUT/tmp/sidestore"
+SS_IPA="$OUT/SideStore.ipa"
+if [ ! -f "$SS_IPA" ]; then
+  SS_IPA="$SS/SideStore.ipa"
+fi
+test -f "$SS_IPA"
+unzip -q "$SS_IPA" -d "$OUT/tmp/sidestore"
 SIDE_APP="$OUT/tmp/sidestore/Payload/SideStore.app"
 test -d "$SIDE_APP"
 rm -rf "$APP/Frameworks/SideStoreApp.framework"

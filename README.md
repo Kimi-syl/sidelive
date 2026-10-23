@@ -7,8 +7,27 @@ separate guest app: opening it takes over the process, and getting back to LiveC
 relaunching. SideLive embeds the built-in SideStore scene in a tab instead, so both UIs stay
 alive and you can flip between them without a relaunch.
 
-> **Status:** experimental. CI builds and packages the IPA; the tab integration has not been
-> verified on a physical device yet. Expect rough edges.
+> **Status:** experimental. CI is green and produces `SideLive.ipa`; the tab integration has
+> not been verified on a physical device yet. Expect rough edges.
+
+## Install
+
+1. Download `SideLive.ipa` from the latest Actions run or release.
+2. Install it with SideStore/AltStore. **Keep app extensions** when asked (`LiveProcess` is
+   required) and use a certificate whose team id matches your SideStore setup.
+3. Open the app. A segmented control at the top switches between **LiveContainer** and
+   **SideStore**; both stay running.
+4. Leave the Settings toggle **Open SideStore** off, otherwise the app boots straight into
+   SideStore (classic mode) and the tabs are not shown.
+
+## Limitations
+
+- Tab mode requires iOS 16+; below that the app behaves like normal LiveContainer.
+- Only the primary LiveContainer instance shows the SideStore tab.
+- SideStore in the tab runs inside LiveContainer's `LiveProcess` extension. If it exits, the tab
+  shows an error and a relaunch button.
+- Runtime behaviour is unverified. If the scene fails to attach, use the **Open SideStore**
+  setting as the classic fallback.
 
 ## How it works
 

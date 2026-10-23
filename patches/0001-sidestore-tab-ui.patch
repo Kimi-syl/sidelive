@@ -1,3 +1,16 @@
+diff --git a/LiveContainer.xcodeproj/project.pbxproj b/LiveContainer.xcodeproj/project.pbxproj
+index e5d705c..9c3d627 100644
+--- a/LiveContainer.xcodeproj/project.pbxproj
++++ b/LiveContainer.xcodeproj/project.pbxproj
+@@ -264,6 +264,8 @@
+ 				DecoratedAppSceneViewController.m,
+ 				LCStatusBarManager.h,
+ 				LCStatusBarManager.m,
++				LCSideStoreTabHost.h,
++				LCSideStoreTabHost.m,
+ 				MultitaskAppWindow.swift,
+ 				MultitaskDockView.swift,
+ 				MultitaskManager.swift,
 diff --git a/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h b/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h
 index 82fc317..ad253fc 100644
 --- a/LiveContainerSwiftUI/LiveContainerSwiftUI-Bridging-Header.h
